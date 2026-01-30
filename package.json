@@ -1,0 +1,27 @@
+{
+  "name": "project_1",
+  "version": "1.0.0",
+  "description": "A beginner-friendly project management application",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jitbaul13-maker/project_management_platform.git"
+  },
+  "keywords": [
+    "backend",
+    "API"
+  ],
+  "author": "Soumyajit Baul",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Jitbaul13-maker/project_management_platform/issues"
+  },
+  "homepage": "https://github.com/Jitbaul13-maker/project_management_platform#readme",
+  "devDependencies": {
+    "prettier": "3.8.1"
+  }
+}
