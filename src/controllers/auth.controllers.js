@@ -159,7 +159,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
   }
 
   let hashedToken = crypto
-    .createhash("sha256")
+    .createHash("sha256")
     .update(verificationToken)
     .digest("hex");
 
@@ -301,6 +301,54 @@ const forgotPasswordReq = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, "Password reset mail has been sent"));
 });
 
+const resetPassword = asyncHandler(async (req, res) => {
+  const { resetToken } = req.params;
+  const { newPassword } = req.body;
+
+  let hashedToken = crypto
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
+
+  const user = await User.findOne({
+    forgotPasswordToken: hashedToken,
+    forgotPasswordExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    throw new ApiError(489, "Token expired/invalid");
+  }
+
+  user.forgotPasswordExpiry = undefined;
+  user.forgotPasswordToken = undefined;
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password rest successfully!"));
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+
+  const user = await User.findById(re1.user?._id);
+
+  const isPasswordValid = await user.isPasswordCorrect(oldPassword);
+
+  if (!isPasswordValid) {
+    throw new ApiError("Invalid password");
+  }
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfilly"));
+});
+
 export {
   registerUser,
   loginUser,
@@ -310,4 +358,6 @@ export {
   resendEmailVerification,
   refreshAccessToken,
   forgotPasswordReq,
+  resetPassword,
+  changePassword,
 };
