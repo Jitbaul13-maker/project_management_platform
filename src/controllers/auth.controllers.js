@@ -279,7 +279,26 @@ const forgotPasswordReq = asyncHandler(async (req, res) => {
     throw new ApiError(404, "User not found!");
   }
 
-  
+  const { unHashedToken, hashedToken, tokenExpiry } =
+    user.generateTemporaryToken();
+
+  user.forgotPasswordToken = hashedToken;
+  user.forgotPasswordExpiry = tokenExpiry;
+
+  await user.save({ validateBeforeSave: false });
+
+  await sendEmail({
+    email: user?.email,
+    subject: "Password reset request",
+    mailgenContent: passwordResetMailgenContent(
+      user.userName,
+      `${process.env.FORGOT_PASSWORD_REDIRECT_URL}/${unHashedToken}`,
+    ),
+  });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password reset mail has been sent"));
 });
 
 export {
@@ -290,4 +309,5 @@ export {
   verifyEmail,
   resendEmailVerification,
   refreshAccessToken,
+  forgotPasswordReq,
 };
