@@ -26,7 +26,7 @@ const router = Router();
 // unsecured routes
 router.route("/register").post(userRegisterValidator(), validate, registerUser);
 router.route("/login").post(userLoginValidator(), validate, loginUser);
-router.route("/verify-email:verificationToken").get(verifyEmail);
+router.route("/verify-email/:verificationToken").get(verifyEmail);
 router.route("/refresh-token").get(refreshAccessToken);
 router
   .route("/forgot-password")
@@ -35,7 +35,7 @@ router
   .route("/reset-password/:resetToken")
   .post(userResetCurrentPasswordValidator(), resetPassword);
 
-// secure route
+// secure routes
 router.route("/logout").post(verifyJWT, logoutUser);
 router.route("/current-user").post(verifyJWT, getCurrentUser);
 router

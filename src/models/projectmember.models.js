@@ -8,7 +8,7 @@ const projectMemberSchema = new Schema(
       ref: "User",
       required: true,
     },
-    user: {
+    project: {
       type: Schema.Types.ObjectId,
       ref: "Project",
       required: true,

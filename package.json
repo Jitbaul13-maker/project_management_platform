@@ -36,6 +36,7 @@
     "jsonwebtoken": "^9.0.3",
     "mailgen": "^2.0.32",
     "mongoose": "^9.1.5",
+    "multer": "^2.1.0",
     "nodemailer": "^7.0.13"
   }
 }

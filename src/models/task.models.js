@@ -5,13 +5,13 @@ const taskSchema = new Schema(
   {
     title: {
       type: String,
-      requied: true,
+      required: true,
       trim: true,
     },
     description: String,
     project: {
       type: Schema.Types.ObjectId,
-      ref: "Projects",
+      ref: "Project",
       required: true,
     },
     assignedTo: {

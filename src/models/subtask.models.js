@@ -3,7 +3,7 @@ import mongoose, { Schema } from "mongoose";
 const subTaskSchema = new Schema(
   {
     title: {
-      typr: String,
+      type: String,
       required: true,
       trim: true,
     },
@@ -14,7 +14,7 @@ const subTaskSchema = new Schema(
     },
     isCompleted: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -22,7 +22,7 @@ const subTaskSchema = new Schema(
       required: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 export const SubTasks = mongoose.model("SubTasks", subTaskSchema);
