@@ -218,12 +218,13 @@ const createSubTask = asyncHandler(async (req, res) => {
 
 const updateSubtask = asyncHandler(async (req, res) => {
   const { subTaskId } = req.params;
-  const { title } = req.body;
+  const { title, isCompleted } = req.body;
 
   const subtask = await SubTasks.findByIdAndUpdate(
     subTaskId,
     {
       title: title,
+      isCompleted: isCompleted,
     },
     {
       new: true,

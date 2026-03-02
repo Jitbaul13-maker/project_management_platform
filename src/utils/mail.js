@@ -1,26 +1,26 @@
 import mailgen from "mailgen";
 import nodemailer from "nodemailer";
 
-const sendEmail = async (options) => {
-  const mailGenerator = new mailgen({
-    theme: "default",
-    product: {
-      name: "Task Manager",
-      link: "https://taskmanagerlink.com",
-    },
-  });
+const transporter = nodemailer.createTransport({
+  host: process.env.MAILTRAP_SMTP_HOST,
+  port: Number(process.env.MAILTRAP_SMTP_PORT),
+  auth: {
+    user: process.env.MAILTRAP_SMTP_USER,
+    pass: process.env.MAILTRAP_SMTP_PASSWORD,
+  },
+});
 
+const mailGenerator = new mailgen({
+  theme: "default",
+  product: {
+    name: "Task Manager",
+    link: "https://taskmanagerlink.com",
+  },
+});
+
+const sendEmail = async (options) => {
   const emailText = mailGenerator.generatePlaintext(options.mailgenContent);
   const emailHTML = mailGenerator.generate(options.mailgenContent);
-
-  const transporter = nodemailer.createTransport({
-    host: process.env.MAILTRAP_SMTP_HOST,
-    port: Number(process.env.MAILTRAP_SMTP_PORT),
-    auth: {
-      user: process.env.MAILTRAP_SMTP_USER,
-      pass: process.env.MAILTRAP_SMTP_PASSWORD,
-    },
-  });
 
   const mail = {
     from: "mail.taskmanager@example.com",
@@ -30,11 +30,7 @@ const sendEmail = async (options) => {
     html: emailHTML,
   };
 
-  try {
-    await transporter.sendMail(mail);
-  } catch (error) {
-    console.error(error);
-  }
+  await transporter.sendMail(mail);
 };
 
 const emailVerificationMailgenContent = (username, verificationurl) => {
