@@ -26,22 +26,30 @@ const generateAccessAndRefreshToken = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { email, userName, password, role } = req.body;
+  const { email, userName, password } = req.body;
 
-  const existedUser = await User.findOne({
-    $or: [{ email }, { userName }],
-  });
+  // const existedUser = await User.findOne({
+  //   $or: [{ email }, { userName }],
+  // });
 
-  if (existedUser) {
-    throw new ApiError(409, "email/username already exists!!!");
+  // if (existedUser) {
+  //   throw new ApiError(409, "email/username already exists!!!");
+  // }
+
+  let user;
+  try {
+    user = await User.create({
+      email,
+      password,
+      userName,
+      isEmailVerified: false,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      throw new ApiError(409, "User with credential already exists!");
+    }
+    throw err;
   }
-
-  const user = await User.create({
-    email,
-    password,
-    userName,
-    isEmailVerified: false,
-  });
 
   const { unHashedToken, hashedToken, tokenExpiry } =
     user.generateTemporaryToken();
@@ -49,20 +57,28 @@ const registerUser = asyncHandler(async (req, res) => {
   user.emailVerificationToken = hashedToken;
   user.emailVerificationExpiry = tokenExpiry;
 
-  await user.save({ validateBeforeSave: false }); // validateBeforeSave: false → skips schema validation only
+  await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
-    email: user?.email,
-    subject: "Verify email",
-    mailgenContent: emailVerificationMailgenContent(
-      user.userName,
-      `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
-    ),
-  });
+  try {
+    await sendEmail({
+      email: user?.email,
+      subject: "Verify email",
+      mailgenContent: emailVerificationMailgenContent(
+        user.userName,
+        `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
+      ),
+    });
+  } catch (err) {
+    console.log("Email could not be sent!", err);
+  }
 
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken -emailVerificationToken",
-  );
+  // const createdUser = await User.findById(user._id).select(
+  //   "-password -refreshToken -emailVerificationToken",
+  // );
+  const createdUser = user.toObject();
+  delete createdUser.password;
+  delete createdUser.refreshToken;
+  delete createdUser.emailVerificationToken;
 
   if (!createdUser) {
     throw new ApiError(500, "Could not register user");
@@ -72,7 +88,7 @@ const registerUser = asyncHandler(async (req, res) => {
     .status(201)
     .json(
       new ApiResponse(
-        200,
+        201,
         { user: createdUser },
         "User registered successfully and verification mail sent!!",
       ),
@@ -167,7 +183,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Missing email verification token!");
   }
 
-  let hashedToken = crypto
+  const hashedToken = crypto
     .createHash("sha256")
     .update(verificationToken)
     .digest("hex");
@@ -214,16 +230,20 @@ const resendEmailVerification = asyncHandler(async (req, res) => {
   user.emailVerificationToken = hashedToken;
   user.emailVerificationExpiry = tokenExpiry;
 
-  await user.save({ validateBeforeSave: false }); // validateBeforeSave: false → skips schema validation only
+  await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
-    email: user?.email,
-    subject: "Verify email",
-    mailgenContent: emailVerificationMailgenContent(
-      user.userName,
-      `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
-    ),
-  });
+  try {
+    await sendEmail({
+      email: user?.email,
+      subject: "Verify email",
+      mailgenContent: emailVerificationMailgenContent(
+        user.userName,
+        `${req.protocol}://${req.get("host")}/api/v1/users/verify-email/${unHashedToken}`,
+      ),
+    });
+  } catch (err) {
+    console.log("Email not sent!");
+  }
 
   return res
     .status(200)
@@ -285,29 +305,64 @@ const forgotPasswordReq = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({ email });
   if (!user) {
-    throw new ApiError(404, "User not found!");
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          {},
+          "If this email exists, a password reset link has been sent.",
+        ),
+      );
+  }
+
+  const now = Date.now();
+  const cooldownTime = 2 * 60 * 1000;
+
+  if (
+    user.forgotPasswordRequestedAt &&
+    now - user.forgotPasswordRequestedAt.getTime() <= cooldownTime
+  ) {
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          {},
+          "If this email exists, a password reset link has been sent.",
+        ),
+      );
   }
 
   const { unHashedToken, hashedToken, tokenExpiry } =
     user.generateTemporaryToken();
-
   user.forgotPasswordToken = hashedToken;
   user.forgotPasswordExpiry = tokenExpiry;
-
+  user.forgotPasswordRequestedAt = now;
   await user.save({ validateBeforeSave: false });
 
-  await sendEmail({
-    email: user?.email,
-    subject: "Password reset request",
-    mailgenContent: passwordResetMailgenContent(
-      user.userName,
-      `${process.env.FORGOT_PASSWORD_REDIRECT_URL}/${unHashedToken}`,
-    ),
-  });
+  try {
+    await sendEmail({
+      email: user?.email,
+      subject: "Password reset request",
+      mailgenContent: passwordResetMailgenContent(
+        user.userName,
+        `${process.env.FORGOT_PASSWORD_REDIRECT_URL}/${unHashedToken}`,
+      ),
+    });
+  } catch (err) {
+    console.log("Failed to send email", err.message);
+  }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "Password reset mail has been sent"));
+    .json(
+      new ApiResponse(
+        200,
+        {},
+        "If this email exists, a password reset link has been sent.",
+      ),
+    );
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
